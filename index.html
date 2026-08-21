@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ArunayanDairy milk collection and dairy operations dashboard">
+  <title>ArunayanDairy | Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu" crossorigin="anonymous" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Application sidebar">
+      <a class="brand" href="#" aria-label="ArunayanDairy dashboard">
+        <span class="brand-mark"><i data-lucide="milk"></i></span>
+        <span><strong>Arunayan</strong><small>DAIRY</small></span>
+      </a>
+
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-view="collections"><i data-lucide="milk"></i><span>Milk collection</span></button>
+        <button class="nav-item" data-view="farmers"><i data-lucide="users"></i><span>Farmers</span></button>
+        <button class="nav-item" data-view="inventory"><i data-lucide="package-open"></i><span>Inventory</span></button>
+        <button class="nav-item" data-view="payments"><i data-lucide="indian-rupee"></i><span>Payments</span></button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="quality-note">
+          <span class="quality-icon"><i data-lucide="shield-check"></i></span>
+          <div><strong>Quality assured</strong><small>All checks up to date</small></div>
+        </div>
+        <button class="profile" type="button">
+          <span class="avatar">AD</span>
+          <span><strong>Arunayan Dairy</strong><small>Operations admin</small></span>
+          <i data-lucide="chevrons-up-down"></i>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <button class="icon-button menu-button" id="menuButton" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+          <div><p id="todayLabel"></p><h1 id="pageTitle">Good morning</h1></div>
+        </div>
+        <div class="topbar-actions">
+          <label class="search-box" for="globalSearch"><i data-lucide="search"></i><span class="sr-only">Search farmers</span><input id="globalSearch" type="search" placeholder="Search farmers..." autocomplete="off"></label>
+          <button class="icon-button" id="notificationButton" aria-label="Notifications"><i data-lucide="bell"></i><span class="notification-dot"></span></button>
+          <button class="primary-button" id="addCollectionButton"><i data-lucide="plus"></i><span>Add collection</span></button>
+        </div>
+      </header>
+
+      <section class="view active" id="overviewView">
+        <div class="section-heading">
+          <div><h2>Today at a glance</h2><p>Morning and evening shifts combined</p></div>
+          <div class="shift-switch" aria-label="Collection shift"><button class="active" data-shift="all">All day</button><button data-shift="morning">Morning</button><button data-shift="evening">Evening</button></div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card accent-green"><div class="metric-top"><span class="metric-icon"><i data-lucide="milk"></i></span><span class="trend positive"><i data-lucide="trending-up"></i> 8.4%</span></div><p>Total milk collected</p><strong id="totalMilk">1,248.5 <small>L</small></strong><span>vs. 1,151 L yesterday</span></article>
+          <article class="metric-card accent-gold"><div class="metric-top"><span class="metric-icon"><i data-lucide="droplets"></i></span><span class="benchmark">Target 4.2%</span></div><p>Average fat</p><strong id="averageFat">4.6<small>%</small></strong><span>Excellent quality batch</span></article>
+          <article class="metric-card accent-blue"><div class="metric-top"><span class="metric-icon"><i data-lucide="users"></i></span><span class="trend positive"><i data-lucide="user-plus"></i> 3</span></div><p>Active farmers</p><strong id="activeFarmers">86</strong><span>72 collected today</span></article>
+          <article class="metric-card accent-coral"><div class="metric-top"><span class="metric-icon"><i data-lucide="wallet-cards"></i></span><span class="benchmark">Today</span></div><p>Collection value</p><strong id="collectionValue">₹54,820</strong><span>Estimated farmer payout</span></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel collection-chart-panel">
+            <div class="panel-heading"><div><h3>Weekly collection</h3><p>Litres received across both shifts</p></div><button class="text-button" data-view-link="collections">View records <i data-lucide="arrow-up-right"></i></button></div>
+            <div class="chart-wrap">
+              <div class="chart-y"><span>1,500</span><span>1,000</span><span>500</span><span>0</span></div>
+              <div class="bar-chart" id="weeklyChart" aria-label="Weekly milk collection bar chart"></div>
+            </div>
+            <div class="chart-legend"><span><i class="legend-dot morning"></i>Morning shift</span><span><i class="legend-dot evening"></i>Evening shift</span></div>
+          </section>
+
+          <aside class="farm-spotlight" aria-label="Dairy farm and cold chain status">
+            <img src="https://images.unsplash.com/photo-1596733430284-f7437764b1a9?auto=format&fit=crop&w=900&q=85" alt="Dairy cows feeding on a farm">
+            <div class="spotlight-overlay"><span class="live-badge"><i></i> OPERATIONS LIVE</span><div><h3>Fresh from local farms</h3><p>Every batch is tested before it enters the cold chain.</p></div><div class="temperature"><i data-lucide="thermometer-snowflake"></i><span><small>CHILLER TEMP</small><strong>3.8°C</strong></span></div></div>
+          </aside>
+        </div>
+
+        <section class="panel recent-panel">
+          <div class="panel-heading"><div><h3>Recent collections</h3><p>Latest entries from the collection desk</p></div><button class="secondary-button" id="exportButton"><i data-lucide="download"></i> Export CSV</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Farmer</th><th>Shift</th><th>Quantity</th><th>Fat / SNF</th><th>Amount</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+              <tbody id="recentCollectionsBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="collectionsView">
+        <div class="page-intro"><div><span class="eyebrow">DAILY OPERATIONS</span><h2>Milk collection</h2><p>Review every shift entry and quality reading.</p></div><button class="primary-button duplicate-add"><i data-lucide="plus"></i> New collection</button></div>
+        <section class="panel data-panel"><div class="panel-heading"><h3>All collection records</h3><span class="record-count" id="collectionCount"></span></div><div class="table-wrap"><table><thead><tr><th>Farmer</th><th>Shift</th><th>Quantity</th><th>Fat / SNF</th><th>Amount</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody id="allCollectionsBody"></tbody></table></div></section>
+      </section>
+
+      <section class="view" id="farmersView">
+        <div class="page-intro"><div><span class="eyebrow">SUPPLIER NETWORK</span><h2>Farmer directory</h2><p>Trusted producers who supply milk to ArunayanDairy.</p></div><button class="primary-button" id="addFarmerButton"><i data-lucide="user-plus"></i> Add farmer</button></div>
+        <div class="farmer-grid" id="farmerGrid"></div>
+      </section>
+
+      <section class="view" id="inventoryView">
+        <div class="page-intro"><div><span class="eyebrow">COLD CHAIN</span><h2>Inventory</h2><p>Live stock position across dairy products.</p></div><button class="secondary-button"><i data-lucide="clipboard-list"></i> Stock report</button></div>
+        <div class="inventory-grid" id="inventoryGrid"></div>
+      </section>
+
+      <section class="view" id="paymentsView">
+        <div class="page-intro"><div><span class="eyebrow">FARMER PAYOUTS</span><h2>Payments</h2><p>Track the current settlement cycle.</p></div><button class="primary-button" id="settleButton"><i data-lucide="badge-indian-rupee"></i> Process payouts</button></div>
+        <div class="payment-summary"><div><span>Next settlement</span><strong>25 Aug 2026</strong><small>4 days remaining</small></div><div><span>Payable this cycle</span><strong>₹4,82,640</strong><small>Across 86 farmers</small></div><div><span>Already settled</span><strong>₹3,94,180</strong><small>81.7% completed</small></div></div>
+        <section class="panel data-panel"><div class="panel-heading"><h3>Recent payouts</h3><span class="status-pill success">On schedule</span></div><div class="table-wrap"><table><thead><tr><th>Farmer</th><th>Period</th><th>Volume</th><th>Amount</th><th>Status</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></section>
+      </section>
+    </main>
+  </div>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <dialog id="collectionDialog">
+    <form id="collectionForm">
+      <div class="dialog-heading"><div><span class="eyebrow">NEW ENTRY</span><h2>Add milk collection</h2><p>Record quantity and quality from the current shift.</p></div><button class="icon-button" type="button" data-close-dialog aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="form-grid">
+        <label class="field full"><span>Farmer</span><select id="farmerName" required><option value="">Select a farmer</option></select></label>
+        <label class="field"><span>Shift</span><select id="shift" required><option>Morning</option><option>Evening</option></select></label>
+        <label class="field"><span>Quantity (litres)</span><input id="quantity" type="number" min="1" step="0.1" placeholder="0.0" required></label>
+        <label class="field"><span>Fat (%)</span><input id="fat" type="number" min="1" max="10" step="0.1" placeholder="4.5" required></label>
+        <label class="field"><span>SNF (%)</span><input id="snf" type="number" min="5" max="12" step="0.1" placeholder="8.6" required></label>
+      </div>
+      <div class="calculated-amount"><span>Estimated amount</span><strong id="estimatedAmount">₹0</strong></div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>Cancel</button><button class="primary-button" type="submit"><i data-lucide="check"></i> Save collection</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="farmerDialog">
+    <form id="farmerForm">
+      <div class="dialog-heading"><div><span class="eyebrow">NEW SUPPLIER</span><h2>Add farmer</h2><p>Create a farmer profile for future collections.</p></div><button class="icon-button" type="button" data-close-farmer aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="form-grid"><label class="field full"><span>Full name</span><input id="newFarmerName" required placeholder="Farmer name"></label><label class="field"><span>Village</span><input id="newFarmerVillage" required placeholder="Village"></label><label class="field"><span>Phone</span><input id="newFarmerPhone" required inputmode="tel" placeholder="+91 98765 43210"></label></div>
+      <div class="dialog-actions"><button class="secondary-button" type="button" data-close-farmer>Cancel</button><button class="primary-button" type="submit"><i data-lucide="check"></i> Save farmer</button></div>
+    </form>
+  </dialog>
+
+  <output class="toast" id="toast" aria-live="polite"><i data-lucide="circle-check"></i><span></span></output>
+</body>
+</html>
