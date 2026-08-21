@@ -525,16 +525,237 @@ Only the backend app security group should accept app traffic from the Load Bala
 
 Only the database security group should accept DB traffic from the backend app security group.
 
-## Next Phase
+## Phase 2: Frontend Tier Implementation
 
-Phase 2 will build the frontend tier using:
+### Objective
+
+Deploy the ArunayanDairy frontend using a secure AWS static-hosting architecture.
 
 ```text
-S3
+User
+  |
 CloudFront
-Route53
-IAM
-CloudWatch
+  |
+Private S3 Bucket
+  |
+Frontend Files
 ```
 
-The frontend will be hosted in S3 and served globally through CloudFront. Route53 will point the project domain to CloudFront.
+### Frontend Application
+
+The ArunayanDairy operations frontend was created using:
+
+```text
+HTML
+CSS
+JavaScript
+```
+
+The application includes:
+
+- Dairy operations overview
+- Milk collection management
+- Farmer directory
+- Inventory tracking
+- Farmer payment tracking
+- Responsive desktop and mobile layouts
+- Browser-based local data persistence
+
+The deployment files are stored at the repository root:
+
+```text
+index.html
+styles.css
+app.js
+```
+
+### Amazon S3 Frontend Bucket
+
+Created bucket:
+
+```text
+arunayandairy-dev-frontend
+```
+
+Configuration:
+
+```text
+Region:              ap-south-1 (Mumbai)
+Object ownership:    Bucket owner enforced
+ACLs:                Disabled
+Block public access: Enabled
+Versioning:          Enabled
+Encryption:          Enabled
+```
+
+The frontend files were uploaded directly to the bucket root. The bucket remains private and is not exposed as an S3 static website.
+
+### Amazon CloudFront Distribution
+
+CloudFront was configured as the public entry point for the frontend.
+
+```text
+Origin:              Private S3 bucket REST endpoint
+Origin access:       Origin Access Control (OAC)
+Signing behavior:    Sign requests using SigV4
+Cache policy:        CachingOptimized
+Viewer protocol:     Redirect HTTP to HTTPS
+Allowed methods:     GET and HEAD
+Default root object: index.html
+```
+
+The S3 bucket policy grants `s3:GetObject` only to the CloudFront distribution. Direct access to S3 objects remains blocked.
+
+### CloudFront Validation
+
+The frontend was successfully tested through the CloudFront distribution:
+
+```text
+https://dxxpkgud2lap0.cloudfront.net/
+```
+
+The following checks were completed:
+
+- CloudFront returns `index.html` for the distribution root
+- HTML, CSS, and JavaScript assets load successfully
+- HTTP requests redirect to HTTPS
+- Direct public S3 access remains blocked
+- Desktop and mobile layouts render correctly
+
+When frontend files are updated in S3, the CloudFront cache is refreshed with an invalidation:
+
+```text
+/*
+```
+
+### Phase 2 Completion Checklist
+
+```text
+[x] Created the ArunayanDairy frontend application
+[x] Created the private S3 frontend bucket
+[x] Enabled S3 versioning and encryption
+[x] Kept S3 Block Public Access enabled
+[x] Uploaded frontend files to the bucket root
+[x] Created the CloudFront distribution
+[x] Configured Origin Access Control
+[x] Applied the CloudFront S3 bucket policy
+[x] Configured HTTPS redirection
+[x] Set index.html as the default root object
+[x] Validated the CloudFront frontend URL
+```
+
+## Phase 2.5: Custom Domain and SSL
+
+### Objective
+
+Connect the frontend to a custom domain and enable HTTPS with an AWS-managed certificate.
+
+Target endpoint:
+
+```text
+https://frontend.arunayandairy.store
+```
+
+### Route 53 Configuration
+
+```text
+Domain:       arunayandairy.store
+Registrar:    GoDaddy
+DNS provider: Amazon Route 53
+```
+
+The GoDaddy nameservers were changed to the Route 53 hosted-zone nameservers, making Route 53 the authoritative DNS provider.
+
+### ACM Certificate
+
+The SSL certificate was created in the AWS region required by CloudFront:
+
+```text
+Region: us-east-1 (N. Virginia)
+```
+
+Certificate domains:
+
+```text
+arunayandairy.store
+frontend.arunayandairy.store
+```
+
+Certificate configuration:
+
+```text
+Validation method: DNS validation
+Status:            Issued
+```
+
+### CloudFront Custom Domain
+
+The alternate domain name was added to the CloudFront distribution:
+
+```text
+frontend.arunayandairy.store
+```
+
+The issued ACM certificate was attached to the distribution.
+
+### Route 53 Alias Record
+
+Created record:
+
+```text
+Record type: A
+Record name: frontend
+Alias:       Yes
+Target:      CloudFront distribution
+```
+
+Final request flow:
+
+```text
+frontend.arunayandairy.store
+          |
+      Route 53
+          |
+      CloudFront
+          |
+  Private S3 Bucket
+```
+
+### Phase 2.5 Completion Checklist
+
+```text
+[x] Created the Route 53 hosted zone
+[x] Updated the domain nameservers at GoDaddy
+[x] Requested the ACM certificate in us-east-1
+[x] Completed DNS certificate validation
+[x] Added the CloudFront alternate domain name
+[x] Attached the ACM certificate to CloudFront
+[x] Created the Route 53 alias record
+```
+
+## Current Project Status
+
+| Phase | Component | Status |
+|---|---|---|
+| Phase 0 | Architecture planning | Completed |
+| Phase 1 | AWS network foundation | Completed |
+| Phase 2 | Frontend hosting | Completed |
+| Phase 2.5 | Custom domain and SSL | Completed |
+| Phase 3 | Backend API deployment | Pending |
+| Phase 4 | Database setup | Pending |
+| Phase 5 | CI/CD pipeline | Pending |
+| Phase 6 | Monitoring and security | Pending |
+
+## Next Phase
+
+### Phase 3: Backend API Tier
+
+Planned work:
+
+- Containerize the .NET API using Docker
+- Push the container image to Amazon ECR
+- Deploy the API using Amazon ECS or Amazon EKS
+- Configure an Application Load Balancer
+- Connect the backend API to Amazon RDS for MySQL
+- Store application secrets in AWS Secrets Manager
+- Add CloudWatch logs, metrics, and alarms
