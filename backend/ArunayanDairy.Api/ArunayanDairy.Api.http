@@ -1,0 +1,14 @@
+@ArunayanDairy_Api_HostAddress = http://localhost:5080
+
+GET {{ArunayanDairy_Api_HostAddress}}/
+Accept: application/json
+
+###
+
+GET {{ArunayanDairy_Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{ArunayanDairy_Api_HostAddress}}/health/live
+Accept: application/json
