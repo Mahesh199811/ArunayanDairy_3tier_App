@@ -1,0 +1,19 @@
+.git
+.gitignore
+.dockerignore
+.vs
+.vscode
+**/bin
+**/obj
+**/*.user
+**/*.suo
+**/*.log
+appsettings.Local.json
+.env
+
+# The API image does not need frontend assets or project documentation.
+index.html
+styles.css
+app.js
+README.md
+backend/README.md

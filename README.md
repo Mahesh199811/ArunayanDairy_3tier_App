@@ -733,6 +733,339 @@ frontend.arunayandairy.store
 [x] Created the Route 53 alias record
 ```
 
+## Phase 3: Backend API Implementation
+
+### Goal
+
+Deploy the ArunayanDairy .NET 8 Web API to AWS using a production-style container architecture.
+
+Target request flow:
+
+```text
+Developer
+  |
+.NET 8 Web API
+  |
+Docker Image
+  |
+Amazon ECR
+  |
+Amazon ECS Fargate
+  |
+Application Load Balancer
+  |
+api.arunayandairy.store
+```
+
+The API, container image, ECR repository, ECS cluster, task definition, and Fargate service are complete. The load balancer and public API domain are the next implementation steps.
+
+### Phase 3.1: Backend API Preparation
+
+#### Application
+
+Backend project:
+
+```text
+ArunayanDairy.Api
+```
+
+Technology:
+
+```text
+ASP.NET Core Minimal API
+.NET 8 LTS
+```
+
+Project structure:
+
+```text
+ArunayanDairy_3tier_app/
+|-- ArunayanDairy.sln
+`-- backend/
+  |-- Dockerfile
+  |-- README.md
+  `-- ArunayanDairy.Api/
+    |-- ArunayanDairy.Api.csproj
+    |-- Program.cs
+    |-- appsettings.json
+    |-- appsettings.Development.json
+    |-- appsettings.Production.json
+    `-- Properties/
+      `-- launchSettings.json
+```
+
+#### Local API Validation
+
+The API was started locally with:
+
+```bash
+dotnet run --project backend/ArunayanDairy.Api
+```
+
+Development address:
+
+```text
+http://localhost:5080
+```
+
+Validated endpoints:
+
+| Endpoint | Purpose | Result |
+|---|---|---|
+| `GET /` | API identity and runtime status | `200 OK` |
+| `GET /health` | Overall health and load balancer health checks | `200 Healthy` |
+| `GET /health/live` | Container liveness checks | `200 Healthy` |
+
+Example root response:
+
+```json
+{
+  "service": "ArunayanDairy API",
+  "environment": "Development",
+  "status": "running"
+}
+```
+
+The Release configuration was also compiled successfully:
+
+```bash
+dotnet build ArunayanDairy.sln --configuration Release
+```
+
+### Phase 3.2: Dockerization
+
+#### Multi-Stage Docker Image
+
+The API uses a multi-stage Docker build:
+
+```text
+Stage 1: .NET SDK 8.0
+     Restore, build, and publish the API
+             |
+Stage 2: ASP.NET Runtime 8.0
+     Copy and run only the published output
+```
+
+The production container configuration includes:
+
+```text
+Environment: Production
+Port:        8080
+Entry point: dotnet ArunayanDairy.Api.dll
+```
+
+The Docker build context excludes Git data, local build output, frontend assets, logs, and local secret files through `.dockerignore`.
+
+#### Local Container Validation
+
+Build the image from the repository root:
+
+```bash
+docker build \
+  -f backend/Dockerfile \
+  -t arunayandairy-api:local \
+  .
+```
+
+Run the container:
+
+```bash
+docker run -d \
+  --name arunayandairy-api \
+  -p 8080:8080 \
+  arunayandairy-api:local
+```
+
+Validated requests:
+
+```bash
+curl http://localhost:8080/
+curl http://localhost:8080/health
+```
+
+The container started with:
+
+```text
+Listening address:    http://[::]:8080
+Hosting environment: Production
+Health result:        200 Healthy
+```
+
+### Phase 3.3: Amazon ECR
+
+#### ECR Repository
+
+Created private repository:
+
+```text
+Repository: arunayandairy-api
+Region:     ap-south-1
+Registry:   659093653742.dkr.ecr.ap-south-1.amazonaws.com
+```
+
+ECR stores versioned backend container images for ECS deployments.
+
+#### Initial Image And Architecture Issue
+
+The first image, `arunayandairy-api:1.0`, was built on an Apple Silicon Mac. Its ARM64 platform did not match the ECS Fargate task's `linux/amd64` runtime.
+
+```text
+Apple Silicon host
+    |
+ARM64 image
+    |
+AMD64 ECS task
+    |
+CannotPullContainerError
+```
+
+The platform error reported that the manifest did not contain a descriptor matching `linux/amd64`.
+
+#### Architecture Fix
+
+The image was rebuilt explicitly for AMD64 using the correct Dockerfile path:
+
+```bash
+docker buildx build \
+  --platform linux/amd64 \
+  -f backend/Dockerfile \
+  -t arunayandairy-api:1.0-amd64 \
+  --load \
+  .
+```
+
+The AMD64 image was tagged as release `1.1` and pushed to ECR:
+
+```bash
+docker tag \
+  arunayandairy-api:1.0-amd64 \
+  659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+
+docker push \
+  659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+```
+
+ECR image:
+
+```text
+659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+```
+
+The ECR push completed successfully and provided an ECS-compatible AMD64 image with this verified digest:
+
+```text
+sha256:7e55d861f9b69977b6cb8cc92fd084b9ae41ccb63f28026c17ab10a4439a23d5
+```
+
+### Phase 3.4: ECS Fargate Deployment
+
+#### ECS Cluster
+
+Created cluster:
+
+```text
+ArunayanDairy-Dev-Cluster
+```
+
+The cluster is the logical environment that manages the backend ECS services and Fargate tasks.
+
+#### ECS Task Execution Role
+
+Created IAM role:
+
+```text
+ArunayanDairy-Dev-ECS-TaskExecutionRole
+```
+
+Attached AWS-managed policy:
+
+```text
+AmazonECSTaskExecutionRolePolicy
+```
+
+The role allows ECS to:
+
+- Pull the private image from Amazon ECR
+- Send container logs to Amazon CloudWatch Logs
+
+#### ECS Task Definition
+
+Created task definition:
+
+```text
+ArunayanDairy-Dev-API
+```
+
+Task configuration:
+
+```text
+Launch compatibility: AWS Fargate
+Container name:       arunayandairy-api
+Container image:      ECR arunayandairy-api:1.1
+Container port:       8080
+Runtime platform:     Linux/X86_64
+Logging:              Amazon CloudWatch
+CPU and memory:       Configured for the development workload
+```
+
+The task definition acts as the versioned deployment blueprint for the API container.
+
+#### ECS Service
+
+Created service:
+
+```text
+ArunayanDairy-Dev-API-Service
+```
+
+Service configuration:
+
+```text
+Launch type:   Fargate
+Desired count: 1
+Network:       Private application subnets
+Public IP:     Disabled
+```
+
+The ECS service maintains the desired number of API tasks and replaces failed tasks automatically.
+
+#### Current Backend Architecture
+
+```text
+Amazon ECR
+arunayandairy-api:1.1
+    |
+ArunayanDairy-Dev-Cluster
+    |
+ArunayanDairy-Dev-API-Service
+    |
+Fargate Task in Private Subnet
+    |
+ArunayanDairy.Api
+    |
+Port 8080
+```
+
+### Phase 3 Completion Status
+
+| Component | Status |
+|---|---|
+| .NET 8 API | Completed |
+| Root and health endpoints | Completed |
+| Release build validation | Completed |
+| Multi-stage Docker image | Completed |
+| Local container testing | Completed |
+| Private ECR repository | Completed |
+| AMD64 image build and push | Completed |
+| ECS cluster | Completed |
+| ECS task execution role | Completed |
+| ECS task definition | Completed |
+| ECS Fargate service | Completed |
+| Fargate container running | Completed |
+| Application Load Balancer | Pending |
+| Public API domain and HTTPS | Pending |
+| Database and Secrets Manager integration | Pending |
+
 ## Current Project Status
 
 | Phase | Component | Status |
@@ -740,22 +1073,77 @@ frontend.arunayandairy.store
 | Phase 0 | Architecture planning | Completed |
 | Phase 1 | AWS network foundation | Completed |
 | Phase 2 | Frontend hosting | Completed |
-| Phase 2.5 | Custom domain and SSL | Completed |
-| Phase 3 | Backend API deployment | Pending |
+| Phase 2.5 | Custom frontend domain and SSL | Completed |
+| Phase 3.1 | Backend API preparation | Completed |
+| Phase 3.2 | Dockerization | Completed |
+| Phase 3.3 | Amazon ECR | Completed |
+| Phase 3.4 | ECS Fargate deployment | Completed |
+| Phase 3.5 | Application Load Balancer | Pending |
+| Phase 3.6 | Custom API domain | Pending |
+| Phase 3.7 | Backend HTTPS | Pending |
+| Phase 3.8 | Backend configuration and RDS integration | Pending |
 | Phase 4 | Database setup | Pending |
 | Phase 5 | CI/CD pipeline | Pending |
-| Phase 6 | Monitoring and security | Pending |
+| Phase 6 | Monitoring and security hardening | Pending |
 
-## Next Phase
+## Remaining Backend Work
 
-### Phase 3: Backend API Tier
+### Phase 3.5: Application Load Balancer
+
+Add the internet-facing entry point for the private ECS service:
+
+```text
+Internet
+   |
+Application Load Balancer
+   |
+Target Group
+   |
+ECS Fargate Task
+   |
+.NET API on port 8080
+```
+
+Planned configuration:
+
+- Internet-facing Application Load Balancer in both public subnets
+- IP target group for Fargate tasks on port `8080`
+- Target group health check path `/health`
+- ALB security group allowing public HTTP and HTTPS
+- ECS security group allowing port `8080` only from the ALB security group
+- ECS service registration with the target group
+
+### Phase 3.6: Custom API Domain
+
+Create a Route 53 alias for:
+
+```text
+api.arunayandairy.store
+```
+
+Request flow:
+
+```text
+Route 53
+  |
+Application Load Balancer
+  |
+ECS API Service
+```
+
+### Phase 3.7: HTTPS
+
+Attach an ACM certificate to the ALB HTTPS listener on port `443` and redirect HTTP port `80` to HTTPS.
+
+### Phase 3.8: Backend Configuration
 
 Planned work:
 
-- Containerize the .NET API using Docker
-- Push the container image to Amazon ECR
-- Deploy the API using Amazon ECS or Amazon EKS
-- Configure an Application Load Balancer
-- Connect the backend API to Amazon RDS for MySQL
-- Store application secrets in AWS Secrets Manager
-- Add CloudWatch logs, metrics, and alarms
+- Add environment-specific ECS task variables
+- Store credentials in AWS Secrets Manager
+- Create and configure Amazon RDS for MySQL
+- Add the database connection and readiness health check
+- Restrict database access to the ECS task security group
+- Add CloudWatch metrics, alarms, and production log retention
+
+At this milestone, ArunayanDairy has moved from a local .NET API to a containerized backend running on Amazon ECS Fargate in private subnets.
