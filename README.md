@@ -735,6 +735,8 @@ frontend.arunayandairy.store
 
 ## Phase 3: Backend API Implementation
 
+Detailed issue history, root-cause analysis, and fixes are documented in [Phase 3 Troubleshooting History](backend/PHASE-3-TROUBLESHOOTING.md).
+
 ### Goal
 
 Deploy the ArunayanDairy .NET 8 Web API to AWS using a production-style container architecture.
@@ -757,7 +759,7 @@ Application Load Balancer
 api.arunayandairy.store
 ```
 
-The API, container image, ECR repository, ECS cluster, task definition, and Fargate service are complete. The load balancer and public API domain are the next implementation steps.
+The API, container image, ECR repository, ECS Fargate service, Application Load Balancer, custom API domain, and HTTPS configuration are complete.
 
 ### Phase 3.1: Backend API Preparation
 
@@ -1062,8 +1064,10 @@ Port 8080
 | ECS task definition | Completed |
 | ECS Fargate service | Completed |
 | Fargate container running | Completed |
-| Application Load Balancer | Pending |
-| Public API domain and HTTPS | Pending |
+| Application Load Balancer | Completed |
+| ALB target group health check | Completed |
+| Public API domain and HTTPS | Completed |
+| HTTP-to-HTTPS redirect | Completed |
 | Database and Secrets Manager integration | Pending |
 
 ## Current Project Status
@@ -1078,33 +1082,33 @@ Port 8080
 | Phase 3.2 | Dockerization | Completed |
 | Phase 3.3 | Amazon ECR | Completed |
 | Phase 3.4 | ECS Fargate deployment | Completed |
-| Phase 3.5 | Application Load Balancer | Pending |
-| Phase 3.6 | Custom API domain | Pending |
-| Phase 3.7 | Backend HTTPS | Pending |
+| Phase 3.5 | Application Load Balancer | Completed |
+| Phase 3.6 | Custom API domain | Completed |
+| Phase 3.7 | Backend HTTPS | Completed |
 | Phase 3.8 | Backend configuration and RDS integration | Pending |
 | Phase 4 | Database setup | Pending |
 | Phase 5 | CI/CD pipeline | Pending |
 | Phase 6 | Monitoring and security hardening | Pending |
 
-## Remaining Backend Work
+## Phase 3 Public API Architecture
 
-### Phase 3.5: Application Load Balancer
-
-Add the internet-facing entry point for the private ECS service:
+The completed public API request flow is:
 
 ```text
-Internet
-   |
-Application Load Balancer
-   |
-Target Group
-   |
-ECS Fargate Task
-   |
-.NET API on port 8080
+Client
+  |
+Route 53: api.arunayandairy.store
+  |
+Application Load Balancer HTTPS:443
+  |
+IP Target Group HTTP:8080
+  |
+ECS Fargate Task in Private Subnet
+  |
+ArunayanDairy.Api
 ```
 
-Planned configuration:
+Completed configuration:
 
 - Internet-facing Application Load Balancer in both public subnets
 - IP target group for Fargate tasks on port `8080`
@@ -1112,28 +1116,18 @@ Planned configuration:
 - ALB security group allowing public HTTP and HTTPS
 - ECS security group allowing port `8080` only from the ALB security group
 - ECS service registration with the target group
+- Route 53 alias record for `api.arunayandairy.store`
+- ACM certificate in `ap-south-1`
+- ALB HTTPS listener on port `443`
+- HTTP port `80` redirect to HTTPS
 
-### Phase 3.6: Custom API Domain
-
-Create a Route 53 alias for:
-
-```text
-api.arunayandairy.store
-```
-
-Request flow:
+Public health endpoint:
 
 ```text
-Route 53
-  |
-Application Load Balancer
-  |
-ECS API Service
+https://api.arunayandairy.store/health
 ```
 
-### Phase 3.7: HTTPS
-
-Attach an ACM certificate to the ALB HTTPS listener on port `443` and redirect HTTP port `80` to HTTPS.
+## Remaining Backend Work
 
 ### Phase 3.8: Backend Configuration
 
