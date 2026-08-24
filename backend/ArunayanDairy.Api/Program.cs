@@ -1,5 +1,7 @@
 using System.Text.Json;
+using ArunayanDairy.Api.Data;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -15,6 +17,35 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
+
+var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
+var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+
+if (!string.IsNullOrWhiteSpace(dbHost) &&
+    !string.IsNullOrWhiteSpace(dbUser) &&
+    !string.IsNullOrWhiteSpace(dbPassword) &&
+    !string.IsNullOrWhiteSpace(dbName))
+{
+    var connectionString =
+        $"Server={dbHost};" +
+        $"Port={dbPort};" +
+        $"Database={dbName};" +
+        $"User={dbUser};" +
+        $"Password={dbPassword};";
+
+    builder.Services.AddDbContext<ArunayanDairyDbContext>(options =>
+        options.UseMySql(
+            connectionString,
+            ServerVersion.AutoDetect(connectionString)));
+
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<ArunayanDairyDbContext>(
+            "mysql",
+            tags: ["ready"]);
+}
 
 var app = builder.Build();
 
@@ -59,6 +90,11 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live")
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
 });
 
 await app.RunAsync();

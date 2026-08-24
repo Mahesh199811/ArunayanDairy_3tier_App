@@ -20,6 +20,7 @@ Available endpoints:
 | `GET /` | API identity and runtime status |
 | `GET /health` | Overall health response with check details |
 | `GET /health/live` | Liveness probe for the container orchestrator |
+| `GET /health/ready` | Readiness probe for configured dependencies, including MySQL |
 
 Test the API:
 
@@ -27,6 +28,7 @@ Test the API:
 curl http://localhost:5080/
 curl http://localhost:5080/health
 curl http://localhost:5080/health/live
+curl http://localhost:5080/health/ready
 ```
 
 ## Run With Docker
@@ -88,7 +90,7 @@ The API image is stored in Amazon Elastic Container Registry (ECR).
 AWS account: 659093653742
 AWS Region:  ap-south-1
 Repository:  arunayandairy-api
-Image tag:   1.1
+Image tag:   2.0
 ```
 
 Before running these commands, configure the AWS CLI with credentials that allow ECR authentication and image uploads.
@@ -175,3 +177,27 @@ Success codes: 200
 ```
 
 Do not store credentials in an appsettings file. Supply database credentials and other secrets through AWS Secrets Manager and environment variables.
+
+## Database Configuration
+
+When all database variables are present, the API registers
+`ArunayanDairyDbContext` with Pomelo Entity Framework Core for MySQL and adds a
+MySQL readiness check to `/health/ready`.
+
+The ECS task supplies the following variables:
+
+```text
+DB_HOST      RDS endpoint supplied as a normal environment variable
+DB_PORT      3306 supplied as a normal environment variable
+DB_USER      username injected from the Secrets Manager JSON key `username`
+DB_PASSWORD  password injected from the Secrets Manager JSON key `password`
+DB_NAME      mysql
+```
+
+The database registration is conditional so the API can still run locally
+without RDS variables. In that case `/health/live` remains available, while
+`/health/ready` has no configured dependency checks.
+
+The RDS infrastructure and EF Core connection path are complete. Application
+entities, tables, and EF Core migrations remain part of the next database
+schema phase.

@@ -1003,7 +1003,7 @@ Task configuration:
 ```text
 Launch compatibility: AWS Fargate
 Container name:       arunayandairy-api
-Container image:      ECR arunayandairy-api:1.1
+Container image:      ECR arunayandairy-api:2.0
 Container port:       8080
 Runtime platform:     Linux/X86_64
 Logging:              Amazon CloudWatch
@@ -1035,7 +1035,7 @@ The ECS service maintains the desired number of API tasks and replaces failed ta
 
 ```text
 Amazon ECR
-arunayandairy-api:1.1
+arunayandairy-api:2.0
     |
 ArunayanDairy-Dev-Cluster
     |
@@ -1068,7 +1068,11 @@ Port 8080
 | ALB target group health check | Completed |
 | Public API domain and HTTPS | Completed |
 | HTTP-to-HTTPS redirect | Completed |
-| Database and Secrets Manager integration | Pending |
+| RDS MySQL instance and private database networking | Completed |
+| Secrets Manager credentials and ECS secret injection | Completed |
+| EF Core and Pomelo MySQL integration | Completed |
+| Database readiness health check | Completed |
+| Database and Secrets Manager integration | Completed |
 
 ## Current Project Status
 
@@ -1085,8 +1089,8 @@ Port 8080
 | Phase 3.5 | Application Load Balancer | Completed |
 | Phase 3.6 | Custom API domain | Completed |
 | Phase 3.7 | Backend HTTPS | Completed |
-| Phase 3.8 | Backend configuration and RDS integration | Pending |
-| Phase 4 | Database setup | Pending |
+| Phase 3.8 | Backend configuration and RDS integration | Completed |
+| Phase 4 | Application schema and EF Core migrations | Pending |
 | Phase 5 | CI/CD pipeline | Pending |
 | Phase 6 | Monitoring and security hardening | Pending |
 
@@ -1120,6 +1124,11 @@ Completed configuration:
 - ACM certificate in `ap-south-1`
 - ALB HTTPS listener on port `443`
 - HTTP port `80` redirect to HTTPS
+- Private RDS MySQL instance on port `3306`
+- RDS security group allowing MySQL only from the ECS API security group
+- ECS execution role permission to retrieve the RDS credentials secret
+- EF Core DbContext configured through ECS environment variables
+- `/health/ready` database readiness endpoint
 
 Public health endpoint:
 
@@ -1127,17 +1136,43 @@ Public health endpoint:
 https://api.arunayandairy.store/health
 ```
 
+Database readiness endpoint:
+
+```text
+https://api.arunayandairy.store/health/ready
+```
+
+The readiness endpoint returned `Healthy` after the ECS deployment, verifying the
+application path from ECS through EF Core and Pomelo MySQL to private RDS.
+
+The API builds its database connection from these ECS variables:
+
+```text
+DB_HOST      = RDS endpoint
+DB_PORT      = 3306
+DB_USER      = Secrets Manager username value
+DB_PASSWORD  = Secrets Manager password value
+DB_NAME      = mysql
+```
+
+The RDS secret contains the credentials only. The RDS endpoint and port are
+provided as regular ECS environment variables rather than `ValueFrom`
+references.
+
 ## Remaining Backend Work
 
-### Phase 3.8: Backend Configuration
+### Phase 4: Application Schema and Migrations
 
 Planned work:
 
-- Add environment-specific ECS task variables
-- Store credentials in AWS Secrets Manager
-- Create and configure Amazon RDS for MySQL
-- Add the database connection and readiness health check
-- Restrict database access to the ECS task security group
+- Change the database name from `mysql` to `ArunayanDairy`
+- Design the initial application entities and relationships
+- Add entity classes and DbSets to `ArunayanDairyDbContext`
+- Create and apply the first EF Core migration
+- Add the initial application tables, such as products, customers, orders, and users
 - Add CloudWatch metrics, alarms, and production log retention
 
-At this milestone, ArunayanDairy has moved from a local .NET API to a containerized backend running on Amazon ECS Fargate in private subnets.
+At this milestone, ArunayanDairy has moved from a local .NET API to a
+containerized backend running on Amazon ECS Fargate in private subnets with
+verified connectivity to private RDS MySQL. The database infrastructure and
+connection path are complete; the application schema is the next phase.
