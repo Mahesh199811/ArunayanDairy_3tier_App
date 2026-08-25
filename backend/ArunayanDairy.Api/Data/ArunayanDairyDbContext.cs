@@ -1,3 +1,4 @@
+using ArunayanDairy.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ArunayanDairy.Api.Data;
@@ -9,4 +10,6 @@ public class ArunayanDairyDbContext : DbContext
         : base(options)
     {
     }
+
+    public DbSet<Product> Products => Set<Product>();
 }

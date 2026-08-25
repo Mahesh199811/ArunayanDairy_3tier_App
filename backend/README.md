@@ -110,7 +110,7 @@ Build the Linux AMD64 image from the repository root. This platform matches the 
 docker buildx build \
 	--platform linux/amd64 \
 	-f backend/Dockerfile \
-	-t arunayandairy-api:1.0-amd64 \
+	-t arunayandairy-api:2.0-amd64 \
 	--load \
 	.
 ```
@@ -119,15 +119,15 @@ Tag the image with the ECR repository URI:
 
 ```bash
 docker tag \
-	arunayandairy-api:1.0-amd64 \
-	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+	arunayandairy-api:2.0-amd64 \
+	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:2.0
 ```
 
 Push the image to ECR:
 
 ```bash
 docker push \
-	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:2.0
 ```
 
 Verify the uploaded image with the AWS CLI:
@@ -135,11 +135,11 @@ Verify the uploaded image with the AWS CLI:
 ```bash
 aws ecr describe-images \
 	--repository-name arunayandairy-api \
-	--image-ids imageTag=1.1 \
+	--image-ids imageTag=2.0 \
 	--region ap-south-1
 ```
 
-The verified `1.1` image is `linux/amd64`. Its local image ID and remote ECR digest match:
+The verified `2.0` image is `linux/amd64` and was successfully pushed to ECR.
 
 ```text
 sha256:7e55d861f9b69977b6cb8cc92fd084b9ae41ccb63f28026c17ab10a4439a23d5
@@ -149,12 +149,12 @@ Pull and run the ECR image when needed:
 
 ```bash
 docker pull \
-	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:2.0
 
 docker run -d \
 	--name arunayandairy-api-ecr \
 	-p 8080:8080 \
-	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:1.1
+	659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:2.0
 ```
 
 ## Production Configuration
