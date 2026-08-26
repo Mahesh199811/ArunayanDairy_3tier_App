@@ -1,0 +1,67 @@
+name: ArunayanDairy Frontend CI/CD
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  S3_BUCKET: arunayandairy-dev-frontend-mahesh-2026
+  CLOUDFRONT_DISTRIBUTION_ID: E11CTYG773TKA8
+
+jobs:
+  deploy-frontend:
+    name: Build and Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate frontend files
+        run: |
+          test -f index.html
+          test -f app.js
+          test -f styles.css
+
+          echo "Frontend files found:"
+          ls -lh index.html app.js styles.css
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::659093653742:role/GitHubActions-ArunayanDairy-Frontend
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActionsFrontend-${{ github.run_id }}
+
+      - name: Verify AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync . s3://${{ env.S3_BUCKET }} \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude "backend/*" \
+            --exclude "tools/*" \
+            --exclude "ArunayanDairy.sln" \
+            --exclude "README.md" \
+            --exclude "INTERVIEW-GUIDE.md"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Deployment completed
+        run: |
+          echo "Frontend deployment completed successfully."
+          echo "https://frontend.arunayandairy.store"
