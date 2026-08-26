@@ -1003,15 +1003,12 @@ Task configuration:
 ```text
 Launch compatibility: AWS Fargate
 Container name:       arunayandairy-api
-Container image:      ECR arunayandairy-api:2.0
+Container image:      ECR arunayandairy-api:1.1
 Container port:       8080
 Runtime platform:     Linux/X86_64
 Logging:              Amazon CloudWatch
 CPU and memory:       Configured for the development workload
 ```
-
-The task definition acts as the versioned deployment blueprint for the API container.
-
 #### ECS Service
 
 Created service:
@@ -1073,6 +1070,10 @@ Port 8080
 | EF Core and Pomelo MySQL integration | Completed |
 | Database readiness health check | Completed |
 | Database and Secrets Manager integration | Completed |
+| Product entity and Products table | Completed |
+| EF Core InitialCreate migration | Completed |
+| Database migrator container | Completed |
+| ArunayanDairy database | Completed |
 
 ## Current Project Status
 
@@ -1090,7 +1091,7 @@ Port 8080
 | Phase 3.6 | Custom API domain | Completed |
 | Phase 3.7 | Backend HTTPS | Completed |
 | Phase 3.8 | Backend configuration and RDS integration | Completed |
-| Phase 4 | Application schema and EF Core migrations | Pending |
+| Phase 4 | Product API and application functionality | In progress |
 | Phase 5 | CI/CD pipeline | Pending |
 | Phase 6 | Monitoring and security hardening | Pending |
 
@@ -1152,27 +1153,48 @@ DB_HOST      = RDS endpoint
 DB_PORT      = 3306
 DB_USER      = Secrets Manager username value
 DB_PASSWORD  = Secrets Manager password value
-DB_NAME      = mysql
+DB_NAME      = ArunayanDairy
 ```
 
 The RDS secret contains the credentials only. The RDS endpoint and port are
 provided as regular ECS environment variables rather than `ValueFrom`
 references.
 
+## Phase 3 Database Migration
+
+The initial EF Core migration is `20260824191040_InitialCreate`. It creates the
+`ArunayanDairy` application database schema, including `Products` and
+`__EFMigrationsHistory`.
+
+The one-off migrator image is built for the ECS Fargate `linux/amd64` platform
+and published to ECR as:
+
+```text
+659093653742.dkr.ecr.ap-south-1.amazonaws.com/arunayandairy-api:db-migrator-1.1
+```
+
+It receives `DB_HOST`, `DB_PORT`, `DB_USER`, and `DB_PASSWORD` from the ECS task.
+Credentials come from Secrets Manager, while the private RDS endpoint is
+provided separately through SSM Parameter Store. A successful migration task
+exits with code `0` and enters `STOPPED`, which is expected for a one-time job.
+
+See [Phase 3 Troubleshooting History](backend/PHASE-3-TROUBLESHOOTING.md) and
+the [backend deployment guide](backend/README.md) for the full procedure and
+the errors encountered during deployment.
+
 ## Remaining Backend Work
 
-### Phase 4: Application Schema and Migrations
+### Phase 4: Application Functionality
 
 Planned work:
 
-- Change the database name from `mysql` to `ArunayanDairy`
-- Design the initial application entities and relationships
-- Add entity classes and DbSets to `ArunayanDairyDbContext`
-- Create and apply the first EF Core migration
-- Add the initial application tables, such as products, customers, orders, and users
+- Add Product CRUD endpoints
+- Add DTOs, validation, repositories, and application services
+- Add customers, orders, farmers, milk collection, inventory, and payments
+- Add Swagger/OpenAPI documentation
+- Add authentication and authorization
 - Add CloudWatch metrics, alarms, and production log retention
 
-At this milestone, ArunayanDairy has moved from a local .NET API to a
-containerized backend running on Amazon ECS Fargate in private subnets with
-verified connectivity to private RDS MySQL. The database infrastructure and
-connection path are complete; the application schema is the next phase.
+Phase 3 moved ArunayanDairy from infrastructure setup to a working cloud
+backend with a deployed .NET 8 API, private RDS MySQL schema, and repeatable
+database migrations. Phase 4 builds the business functionality on that base.
